@@ -1,4 +1,4 @@
-import sys, lambdatools
+import sys, lambdatools, dirtools
 
 class bcolors:
     HEADER = '\033[95m'
@@ -252,11 +252,14 @@ class Source():
 		# Final dedent
 		blockstack = blockstack[:1];
 
-		output = str(blockstack[0]).split('\n');
-		for index in range(0, len(output)):
-			if '-ln' in switches:
-				print(str(index + 1).rjust(4) + ' ', end = "");
-			show(output[index]);
+		if '-p' in switches:
+			output = str(blockstack[0]).split('\n');
+			for index in range(0, len(output)):
+				if '-ln' in switches:
+					print(str(index + 1).rjust(4) + ' ', end = "");
+				show(output[index]);
+
+		return blockstack[0];
 
 	@staticmethod
 	def indentLevel(line):
@@ -271,6 +274,10 @@ def isDebugging():
 switches = [];
 if __name__ == '__main__':
 	args = sys.argv;
+
+	for line in sys.stdin:
+		args.append(line.rstrip());
+
 	lambdatools.setup();
 
 	switches = args.where(lambda a: a[0] == '-');
@@ -279,17 +286,25 @@ if __name__ == '__main__':
 	if len(args) < 2:
 		print('Need more arguments!');
 	else:
-		source = [];
+		for sourcefile in args[1:]:
+			source = [];
 
-		with open(args[1]) as f:
-			for line in f:
-				source.append(line.rstrip('\n'));
+			with open(sourcefile) as f:
+				for line in f:
+					source.append(line.rstrip('\n'));
 
-		if '-b' in switches:
-			print(bcolors.WARNING + 'Before:' + bcolors.ENDC);
-			[show(line) for line in source];
-			print(bcolors.WARNING + '\nAfter:' + bcolors.ENDC);
+			if '-b' in switches:
+				print(bcolors.WARNING + 'Before:' + bcolors.ENDC);
+				[show(line) for line in source];
+				print(bcolors.WARNING + '\nAfter:' + bcolors.ENDC);
 
-		source = source.where(lambda l: line.strip() != '');
+			source = source.where(lambda l: line.strip() != '');
+			result = Source.parse(source);
 
-	Source.parse(source);
+			# If not just printing.
+			if not '-p' in switches:
+				outname = dirtools.getName(sourcefile).replace('.dml', '.html');
+				path = dirtools.getDirectory(sourcefile) + '\\' + outname;
+
+				with open(path, 'w') as out:
+					out.write(str(result));
