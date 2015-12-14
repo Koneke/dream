@@ -92,10 +92,7 @@ class Macro():
 		for arg in args:
 			source = arg;
 			destination = '{' + self.args[args.index(arg)] + '}';
-			print('s ' + source);
-			print('d ' + destination);
 			result = result.replace(destination, source);
-			print('r ' + result);
 
 		return re.sub(Macro.macroRegex, result, line);
 
