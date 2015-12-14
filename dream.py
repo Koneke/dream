@@ -1,4 +1,9 @@
-import sys, lambdatools, dirtools, re
+# TODO:
+# Parse macros in source file.
+# Split things up for readability, this is getting retarded.
+# How do modules even work anyways, really.
+
+import sys, lambdatools, dirtools, re;
 
 class bcolors:
     HEADER = '\033[95m'
@@ -48,17 +53,51 @@ def show(s):
 
 	print(output);
 
-def isMacroCall(tag):
-	# Temporary, simple solution.
-	if '(' not in tag or ')' not in tag:
-		return False;
-	return True;
-
 class Macro():
+	macros = {};
+
+	macroTagRegex = r'\w[\w\-_]+'
+	valueRegex = r'\w+'
+
+	macroRegex = ''.join([
+		r'(?P<full>',
+			# Tag itself
+			r'(?P<macro>', macroTagRegex, r')', r'\s*',
+			# 'Physical' start parenthesis
+			r'\(', r'\s*',
+			# Argument group (optional)
+			r'(?P<arguments>',
+				# First argument
+				valueRegex, r'\s*',
+				# The rest
+				r'(,', r'\s*', valueRegex, r'\s*', r')*',
+			r')?',
+			# 'Physical' end parenthesis
+			r'\s*', r'\)',
+		r')'
+	]);
+
 	def __init__(self):
 		self.name = None;
 		self.args = [];
 		self.body = None;
+
+	def feed(self, line, matches):
+		result = self.body;
+
+		args = None;
+		if matches.group("arguments"):
+			args = [arg.strip() for arg in matches.group("arguments").split(',')];
+
+		for arg in args:
+			source = arg;
+			destination = '{' + self.args[args.index(arg)] + '}';
+			print('s ' + source);
+			print('d ' + destination);
+			result = result.replace(destination, source);
+			print('r ' + result);
+
+		return re.sub(Macro.macroRegex, result, line);
 
 class Tag():
 	@staticmethod
@@ -202,14 +241,17 @@ class Source():
 		test.name = 'test';
 		test.args = ['test'];
 		test.body = 'span: {test}';
-		macros['test'] = test;
+		Macro.macros['test'] = test;
 
 		source = [line for line in source if line != ''];
+		for i in range(0, len(source)):
+			line = source[i];
+			matches = re.search(Macro.macroRegex, line);
+			if matches:
+				source[i] = Macro.macros[matches.group('macro')].feed(line, matches);
 
 		indents = [Source.indentLevel(line) for line in source];
-
 		blockstack = [];
-
 		currentdent = None;
 
 		tags = [Tag.parse(line) for line in source];

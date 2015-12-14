@@ -1,5 +1,9 @@
 import re;
 
+# Sample macro
+macroArgs = ['test'];
+macroBody = 'span.foo#{test}: qux';
+
 macroTagRegex = r'\w[\w\-_]+'
 valueRegex = r'\w+'
 
@@ -19,6 +23,16 @@ macroRegex = ''.join([
 	r'\s*', r'\)'
 ]);
 
+def feed(body, sig, args):
+	result = body;
+	for arg in args:
+		source = arg;
+		destination = '{' + sig[args.index(arg)] + '}';
+		# print('s: ' + source);
+		# print('d: ' + destination);
+		result = result.replace(destination, source);
+	return result;
+
 while True:
 	l = input('>> ');
 	if l == '':
@@ -26,9 +40,12 @@ while True:
 
 	result = re.search(macroRegex, l);
 	if result:
-		print('true');
 		print(result.group("tag"));
+
 		if result.group("arguments"):
-			print([arg.strip() for arg in result.group("arguments").split(',')]);
+			args = [arg.strip() for arg in result.group("arguments").split(',')];
+			print(args);
+			print(feed(macroBody, macroArgs, args));
 	else:
 		print('false');
+	print('');
