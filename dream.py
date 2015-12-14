@@ -1,4 +1,4 @@
-import sys, lambdatools, dirtools
+import sys, lambdatools, dirtools, re
 
 class bcolors:
     HEADER = '\033[95m'
@@ -12,7 +12,12 @@ class bcolors:
 
 def halve(text, separator):
 	split = text.split(separator);
-	return (separator.join(split[:-1]), split[-1]);
+	first = separator.join(split[:-1]);
+
+	if len(split) > 1:
+		return (first, split[-1]);
+	else:
+		return first, None;
 
 # Not so much nontag, as ignored tag.
 # I.e., something to remain exactly as html as written.
@@ -42,6 +47,18 @@ def show(s):
 		output = output.replace('\t', '    ');
 
 	print(output);
+
+def isMacroCall(tag):
+	# Temporary, simple solution.
+	if '(' not in tag or ')' not in tag:
+		return False;
+	return True;
+
+class Macro():
+	def __init__(self):
+		self.name = None;
+		self.args = [];
+		self.body = None;
 
 class Tag():
 	@staticmethod
@@ -179,7 +196,16 @@ class Source():
 
 	@staticmethod
 	def parse(source, indent = 0):
+		macros = {};
+
+		test = Macro();
+		test.name = 'test';
+		test.args = ['test'];
+		test.body = 'span: {test}';
+		macros['test'] = test;
+
 		source = [line for line in source if line != ''];
+
 		indents = [Source.indentLevel(line) for line in source];
 
 		blockstack = [];
@@ -275,8 +301,10 @@ switches = [];
 if __name__ == '__main__':
 	args = sys.argv;
 
-	for line in sys.stdin:
-		args.append(line.rstrip());
+	# If we're piped...
+	if not sys.stdin.isatty():
+		for line in sys.stdin:
+			args.append(line.rstrip());
 
 	lambdatools.setup();
 
