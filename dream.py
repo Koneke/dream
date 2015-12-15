@@ -1,7 +1,6 @@
 # TODO:
-# Parse macros in source file.
 # Split things up for readability, this is getting retarded.
-# How do modules even work anyways, really.
+# How do python modules even work anyways, really.
 
 import sys, lambdatools, dirtools, re;
 
@@ -89,10 +88,11 @@ class Macro():
 		if matches.group("arguments"):
 			args = [arg.strip() for arg in matches.group("arguments").split(',')];
 
-		for arg in args:
-			source = arg;
-			destination = '{' + self.args[args.index(arg)] + '}';
-			result = result.replace(destination, source);
+		if args:
+			for arg in args:
+				source = arg;
+				destination = '{' + self.args[args.index(arg)] + '}';
+				result = result.replace(destination, source);
 
 		return re.sub(Macro.macroRegex, result, line);
 
@@ -231,21 +231,61 @@ class Source():
 		print();
 
 	@staticmethod
-	def parse(source, indent = 0):
-		macros = {};
+	def parseMacroDefinitions(insource):
+		lastMacroLine = 0;
 
-		test = Macro();
-		test.name = 'test';
-		test.args = ['test'];
-		test.body = 'span: {test}';
-		Macro.macros['test'] = test;
+		for i in range(0, len(insource)):
+			line = insource[i];
+			rematch = re.search(r'def\s+' + Macro.macroRegex + '\s*:', line);
+			if rematch:
+				# Grab and strip arguments/signature.
+				if rematch.group('arguments'):
+					args = [arg.strip() for arg in rematch.group('arguments').split(',')]
+				else:
+					args = [];
 
-		source = [line for line in source if line != ''];
+				body = [];
+				for j in range(i + 1, len(insource)):
+					other = insource[j];
+					# If we're at the same, or a shallower indent, we're out.
+					if Source.indentLevel(other) <= Source.indentLevel(line):
+						break;
+					lastMacroLine = j;
+					# Append line to macro body, stripping one tab from the start.
+					body.append(other[1:]);
+
+				macro = Macro();
+				macro.name = rematch.group('macro');
+				macro.args = args;
+				macro.body = '\n'.join(body);
+
+				Macro.macros[macro.name] = macro;
+
+		return insource[lastMacroLine + 1:];
+
+	@staticmethod
+	def processMacros(insource):
+		source = list(insource);
+		match = False;
+
 		for i in range(0, len(source)):
 			line = source[i];
 			matches = re.search(Macro.macroRegex, line);
 			if matches:
+				match = True;
+				# This should not be replace line, it should be insert line(s).
 				source[i] = Macro.macros[matches.group('macro')].feed(line, matches);
+
+		return match, source;
+
+	@staticmethod
+	def parse(insource, indent = 0):
+		source = [line for line in insource if line != ''];
+		source = Source.parseMacroDefinitions(source);
+
+		match = True;
+		while match:
+			match, source = Source.processMacros(source);
 
 		indents = [Source.indentLevel(line) for line in source];
 		blockstack = [];
