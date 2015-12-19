@@ -56,7 +56,7 @@ class Macro():
 	macros = {};
 
 	macroTagRegex = r'\w[\w\-_]+'
-	valueRegex = r'\w+'
+	valueRegex = r'[\w/\d\s]+'
 
 	macroRegex = ''.join([
 		r'(?P<full>',
@@ -126,6 +126,9 @@ class Tag():
 			source, attribute = halve(source, '; ');
 			key, value = halve(attribute, '=');
 			attributes.append((key, value));
+
+		# Make them the same order as in the source.
+		attributes = attributes[::-1];
 
 
 		if '#' in source:
