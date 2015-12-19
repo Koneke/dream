@@ -83,6 +83,7 @@ class Macro():
 
 	def feed(self, line, matches):
 		result = self.body;
+		indent = Source.indentLevel(line);
 
 		args = None;
 		if matches.group("arguments"):
@@ -92,7 +93,9 @@ class Macro():
 			for arg in args:
 				source = arg;
 				destination = '{' + self.args[args.index(arg)] + '}';
-				result = result.replace(destination, source);
+				result = [l.replace(destination, source) for l in result];
+
+		result = ('\n' + '\t' * indent).join(result);
 
 		return re.sub(Macro.macroRegex, result, line);
 
@@ -217,11 +220,7 @@ class Tag():
 class Source():
 	@staticmethod
 	def flatten(blocks):
-		blockstack = list(blocks);
-
-		blockstack = blockstack[:-1];
-
-		return blockstack;
+		return list(blocks)[:-1];
 
 	@staticmethod
 	def printblocks(blocks):
@@ -257,7 +256,7 @@ class Source():
 				macro = Macro();
 				macro.name = rematch.group('macro');
 				macro.args = args;
-				macro.body = '\n'.join(body);
+				macro.body = body;
 
 				Macro.macros[macro.name] = macro;
 
@@ -273,8 +272,8 @@ class Source():
 			matches = re.search(Macro.macroRegex, line);
 			if matches:
 				match = True;
-				# This should not be replace line, it should be insert line(s).
-				source[i] = Macro.macros[matches.group('macro')].feed(line, matches);
+				macroOut = Macro.macros[matches.group('macro')].feed(line, matches).split('\n');
+				source[i:i + 1] = macroOut;
 
 		return match, source;
 
