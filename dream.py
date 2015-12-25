@@ -56,7 +56,7 @@ class Macro():
 	macros = {};
 
 	macroTagRegex = r'\w[\w\-_]+'
-	valueRegex = r'[\w/\d\s]+'
+	valueRegex = r'[\w/\d\s\.]+'
 
 	macroRegex = ''.join([
 		r'(?P<full>',
